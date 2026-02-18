@@ -145,7 +145,13 @@ fn Term cnf_at(Term term, u32 depth, u32 par_depth) {
     case NAM:
     case BJV:
     case BJ0:
-    case BJ1: {
+    case BJ1:
+    case BJG: {
+      return term;
+    }
+
+    case GET:
+    case GOT: {
       return term;
     }
 

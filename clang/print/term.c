@@ -636,6 +636,61 @@ fn void print_term_go(FILE *f, Term term, u32 depth, PrintState *st) {
       print_term_at(f, HEAP[loc], depth, st);
       break;
     }
+    case MOV: {
+      u32 loc = term_val(term);
+      fputs("!%", f);
+      if (quoted) {
+        print_alpha_name(f, depth + 1, 'a');
+      } else {
+        fputc('?', f);
+      }
+      fputc('=', f);
+      print_term_at(f, HEAP[loc + 0], depth, st);
+      fputc(';', f);
+      print_term_at(f, HEAP[loc + 1], depth + 1, st);
+      break;
+    }
+    case GET: {
+      u32 loc = term_val(term);
+      if (loc != 0 && term_sub_get(HEAP[loc])) {
+        print_term_mode(f, term_sub_set(HEAP[loc], 0), depth, 0, 0, 0, st);
+      } else {
+        fprintf(f, "?GET(%u)", loc);
+      }
+      break;
+    }
+    case GOT: {
+      u32 loc = term_val(term);
+      if (loc != 0 && term_sub_get(HEAP[loc])) {
+        print_term_mode(f, term_sub_set(HEAP[loc], 0), depth, 0, 0, 0, st);
+      } else {
+        fprintf(f, "?GOT(%u)", loc);
+      }
+      break;
+    }
+    case BJG: {
+      u32 lvl  = term_val(term);
+      u32 bind = 0;
+      if (quoted && lvl > 0 && lvl <= st->subst_len) {
+        bind = alo_subst_get(subst, st->subst_len - lvl);
+      }
+      if (bind != 0) {
+        Term val = HEAP[bind];
+        if (term_sub_get(val)) {
+          val = term_sub_set(val, 0);
+          print_term_mode(f, val, depth, 0, 0, 0, st);
+        } else {
+          print_term_mode(f, term_new_get(bind), depth, 0, 0, 0, st);
+        }
+      } else {
+        u32 nam = (lvl > st->subst_len) ? (lvl - st->subst_len) : 0;
+        if (nam > depth) {
+          nam = 0;
+        }
+        print_alpha_name(f, nam, 'a');
+      }
+      break;
+    }
   }
 }
 

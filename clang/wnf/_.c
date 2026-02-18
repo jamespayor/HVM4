@@ -57,6 +57,12 @@ __attribute__((cold, noinline)) static Term wnf_rebuild(Term cur, Term *stack, u
         cur = term_new(0, EQL, 0, loc);
         break;
       }
+      case GET: {
+        u32 loc = term_val(frame);
+        heap_set(loc, cur);
+        cur = term_new_got(loc);
+        break;
+      }
       default: {
         break;
       }
@@ -106,6 +112,19 @@ __attribute__((hot)) fn Term wnf(Term term) {
         u32 loc = term_val(next);
         Term cell = heap_take(loc);
         if (term_sub_get(cell)) {
+          next = term_sub_set(cell, 0);
+          goto enter;
+        }
+        stack[s_pos++] = next;
+        next = cell;
+        goto enter;
+      }
+
+      case GET: {
+        u32  loc  = term_val(next);
+        Term cell = heap_read(loc);
+        if (term_sub_get(cell)) {
+          heap_set(loc, term_sub_set(term_new_era(), 1));
           next = term_sub_set(cell, 0);
           goto enter;
         }
@@ -220,6 +239,14 @@ __attribute__((hot)) fn Term wnf(Term term) {
             next = wnf_alo_dup(ls_loc, len, term_val(book), term_ext(book));
             goto enter;
           }
+          case MOV: {
+            next = wnf_alo_mov(ls_loc, len, term_val(book));
+            goto enter;
+          }
+          case BJG: {
+            next = wnf_alo_var(ls_loc, len, term_val(book), BJG);
+            goto enter;
+          }
           case NUM: {
             next = term_new_num(term_val(book));
             goto enter;
@@ -285,6 +312,7 @@ __attribute__((hot)) fn Term wnf(Term term) {
       case BJV:
       case BJ0:
       case BJ1:
+      case BJG:
       case DRY:
       case ERA:
       case SUP:
@@ -294,6 +322,7 @@ __attribute__((hot)) fn Term wnf(Term term) {
       case SWI:
       case USE:
       case INC:
+      case GOT:
       case C00 ... C16: {
         whnf = next;
         goto apply;
@@ -329,6 +358,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term arg     = heap_read(app_loc + 1);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_app_era();
               continue;
@@ -389,6 +429,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
         case SWI: {
           Term mat = frame;
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_app_era();
               continue;
@@ -431,6 +482,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
         case USE: {
           Term use = frame;
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_use_era();
               continue;
@@ -460,6 +522,20 @@ __attribute__((hot)) fn Term wnf(Term term) {
           u32 lab  = term_ext(frame);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                // Second encounter: cached value
+                inner = term_sub_set(inner, 0);
+                heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+                whnf = heap_subst_cop(side, loc, inner, inner);
+                continue;
+              }
+              // First encounter: clone and cache
+              whnf = wnf_dup_got(lab, loc, side, mov_loc, inner);
+              continue;
+            }
             case NAM:
             case BJV:
             case BJ0:
@@ -518,6 +594,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term y   = heap_read(loc + 1);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_op2_era();
               continue;
@@ -556,6 +643,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           u32 x_val = term_val(frame);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_op2_num_era();
               continue;
@@ -591,6 +689,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term b   = heap_read(loc + 1);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_eql_era_l();
               continue;
@@ -626,6 +735,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term a   = heap_read(loc + 0);  // a's WHNF was stored here
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_eql_era_r();
               continue;
@@ -705,6 +825,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term b   = heap_read(loc + 2);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_dsu_era();
               continue;
@@ -737,6 +868,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term bod = heap_read(loc + 2);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_ddu_era();
               continue;
@@ -768,6 +910,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term b   = heap_read(loc + 1);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_and_era();
               continue;
@@ -792,6 +945,23 @@ __attribute__((hot)) fn Term wnf(Term term) {
         }
 
         // -----------------------------------------------------------------------
+        // GET frame: GET(mov_loc) - we reduced the MOV cell's value, write back
+        // -----------------------------------------------------------------------
+        case GET: {
+          u32 loc = term_val(frame);
+          // Write WNF result back to cell
+          heap_set(loc, whnf);
+          // If neutral: return as-is
+          u8 wtag = term_tag(whnf);
+          if (wtag == NAM || wtag == BJV || wtag == BJ0 || wtag == BJ1 || wtag == BJG || wtag == DRY) {
+            continue;
+          }
+          // Constructor: return GOT
+          whnf = term_new_got(loc);
+          continue;
+        }
+
+        // -----------------------------------------------------------------------
         // OR frame: (□ .|. b) - we reduced a, dispatch
         // -----------------------------------------------------------------------
         case OR: {
@@ -799,6 +969,17 @@ __attribute__((hot)) fn Term wnf(Term term) {
           Term b   = heap_read(loc + 1);
 
           switch (term_tag(whnf)) {
+            case GOT: {
+              u32  mov_loc = term_val(whnf);
+              Term inner   = heap_read(mov_loc);
+              if (term_sub_get(inner)) {
+                inner = term_sub_set(inner, 0);
+              }
+              heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+              whnf = inner;
+              s_pos++;
+              continue;
+            }
             case ERA: {
               whnf = wnf_or_era();
               continue;
@@ -844,6 +1025,7 @@ fn Term wnf_at(u32 loc) {
     case BJV:
     case BJ0:
     case BJ1:
+    case BJG:
     case DRY:
     case ERA:
     case SUP:
@@ -853,6 +1035,7 @@ fn Term wnf_at(u32 loc) {
     case SWI:
     case USE:
     case INC:
+    case GOT:
     case C00 ... C16: {
       return cur;
     }
@@ -887,6 +1070,7 @@ __attribute__((cold, noinline)) fn Term wnf_steps_at(u32 loc) {
     case BJV:
     case BJ0:
     case BJ1:
+    case BJG:
     case DRY:
     case ERA:
     case SUP:
@@ -896,6 +1080,7 @@ __attribute__((cold, noinline)) fn Term wnf_steps_at(u32 loc) {
     case SWI:
     case USE:
     case INC:
+    case GOT:
     case C00 ... C16: {
       return cur;
     }

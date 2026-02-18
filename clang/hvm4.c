@@ -96,6 +96,10 @@ typedef struct {
 #define BJ0 43  // Bj0(n): quoted dup-bound variable (side 0, de Bruijn level)
 #define BJ1 44  // Bj1(n): quoted dup-bound variable (side 1, de Bruijn level)
 #define PRI 45  // Pri(p): primitive (native) function
+#define MOV 46  // Mov(val, body): book-term only binding for shared access
+#define GET 47  // Get(loc): unreduced pointer to MOV cell
+#define GOT 48  // Got(loc): resolved pointer to MOV cell (WHNF)
+#define BJG 49  // Bjg(n): quoted MOV-bound variable (de Bruijn level)
 
 // LAM Ext Flags
 // =============
@@ -323,6 +327,9 @@ static int    PARSE_FORK_SIDE = -1;      // -1 = off, 0 = left branch (DP0), 1 =
 #include "term/new/uns.c"
 #include "term/new/inc.c"
 #include "term/new/num.c"
+#include "term/new/mov.c"
+#include "term/new/get.c"
+#include "term/new/got.c"
 #include "term/clone.c"
 
 // Heap Substitution
@@ -448,12 +455,14 @@ static int    PARSE_FORK_SIDE = -1;      // -1 = off, 0 = left branch (DP0), 1 =
 #include "wnf/dup_lam.c"
 #include "wnf/dup_sup.c"
 #include "wnf/dup_nod.c"
+#include "wnf/dup_got.c"
 #include "wnf/alo_var.c"
 #include "wnf/alo_cop.c"
 #include "wnf/alo_nam.c"
 #include "wnf/alo_dry.c"
 #include "wnf/alo_lam.c"
 #include "wnf/alo_dup.c"
+#include "wnf/alo_mov.c"
 #include "wnf/alo_nod.c"
 #include "wnf/op2_era.c"
 #include "wnf/op2_sup.c"

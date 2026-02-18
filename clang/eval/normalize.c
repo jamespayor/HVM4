@@ -41,8 +41,8 @@ static inline void eval_normalize_go(EvalNormalizeCtx *ctx, EvalNormalizeWorker 
     Term term = __builtin_expect(STEPS_ENABLE, 0) ? wnf_steps_at(loc) : wnf_at(loc);
     u32 tloc = term_val(term);
     u8  tag  = term_tag(term);
-    // DP0/DP1 have term_arity == 0, handle separately
-    if (tag == DP0 || tag == DP1) {
+    // DP0/DP1/GET/GOT have term_arity == 0, handle separately
+    if (tag == DP0 || tag == DP1 || tag == GET || tag == GOT) {
       loc = tloc;
       continue;
     }
