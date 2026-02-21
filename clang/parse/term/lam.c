@@ -105,6 +105,29 @@ fn Term parse_term_lam(PState *s, u32 depth) {
     }
   }
 
+  // MOV lambda: λ%x. body  →  LAM(MOV(BJV(lam_lvl), body_with_BJGs))
+  if (parse_peek(s) == '%') {
+    parse_advance(s); // consume %
+    u32 nam = parse_name(s);
+    parse_skip(s);
+    parse_bind_push(nam, depth + 1, PARSE_MOV_LAB, 0, 0);
+    Term body;
+    if (parse_match(s, ",")) {
+      body = parse_term_lam(s, depth + 2);
+    } else {
+      parse_consume(s, ".");
+      body = parse_term(s, depth + 2);
+    }
+    parse_bind_pop();
+    // Build: LAM(depth+1, MOV[BJV(depth+1), body])
+    u64 mov_loc = heap_alloc(2);
+    HEAP[mov_loc + 0] = term_new(0, BJV, 0, depth + 1);
+    HEAP[mov_loc + 1] = body;
+    u64 lam_loc = heap_alloc(1);
+    HEAP[lam_loc] = term_new(0, MOV, 0, mov_loc);
+    return term_new(0, LAM, depth + 1, lam_loc);
+  }
+
   // Unscoped lambda: λ$x. body
   if (parse_peek(s) == '$') {
     parse_advance(s);  // consume '$'

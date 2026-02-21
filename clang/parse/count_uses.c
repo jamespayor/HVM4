@@ -10,7 +10,7 @@ fn u32 count_uses(Term t, u32 lvl, u8 tgt, u32 ext) {
     t = ts[--ts_idx];
     u8  tg = term_tag(t);
     u32 vl = term_val(t);
-    if (tg == tgt && vl == lvl && (tgt == BJV || term_ext(t) == ext)) {
+    if (tg == tgt && vl == lvl && (tgt == BJV || tgt == BJG || term_ext(t) == ext)) {
       uses++;
     }
     u32 ari = term_arity(t);

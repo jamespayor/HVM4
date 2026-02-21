@@ -276,6 +276,7 @@ static u32    PARSE_BINDS_LEN = 0;
 static u32    PARSE_FRESH_LAB = 0x800000; // start at 2^23 to avoid collision with user labels
 static int    PARSE_FORK_SIDE = -1;      // -1 = off, 0 = left branch (DP0), 1 = right branch (DP1)
 #define PARSE_DYN_LAB 0xFFFFFFFFu
+#define PARSE_MOV_LAB 0xFFFFFFFEu
 
 // Term
 // ====
@@ -409,6 +410,7 @@ static int    PARSE_FORK_SIDE = -1;      // -1 = off, 0 = left branch (DP0), 1 =
 #include "parse/name.c"
 #include "parse/utf8.c"
 #include "parse/term/lam.c"
+#include "parse/term/mov.c"
 #include "parse/term/dup.c"
 #include "parse/term/fork.c"
 #include "parse/term/sup.c"

@@ -2,6 +2,16 @@ fn Term parse_term(PState *s, u32 depth);
 
 fn Term parse_term_dup(PState *s, u32 depth) {
   parse_skip(s);
+  // Check for !%x = val; body (MOV binding)
+  if (parse_peek(s) == '%') {
+    parse_advance(s); // consume %
+    parse_skip(s);
+    u32 nam = parse_name(s);
+    parse_skip(s);
+    parse_consume(s, "=");
+    parse_skip(s);
+    return parse_term_mov_body(s, depth, nam);
+  }
   // Check for !!x = val or !!&x = val (strict let, optionally cloned)
   int strict = parse_match(s, "!");
   parse_skip(s);

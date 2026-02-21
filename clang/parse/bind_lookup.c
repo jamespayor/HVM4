@@ -6,12 +6,14 @@ fn PBind* parse_bind_lookup(u32 name, int side, int *skipped) {
     PBind* bind = &PARSE_BINDS[i];
     if (bind->name == name) {
       // Skip dup bindings if no subscript and not in fork mode
-      if (side == -1 && bind->lab != 0 && !bind->forked) {
+      // (MOV bindings use no subscript, so don't skip them)
+      if (side == -1 && bind->lab != 0 && bind->lab != PARSE_MOV_LAB && !bind->forked) {
         *skipped = 1;
         continue;
       }
       // Skip non-dup bindings if subscript or fork mode
-      if (side != -1 && bind->lab == 0) {
+      // (MOV bindings also cannot have subscripts)
+      if (side != -1 && (bind->lab == 0 || bind->lab == PARSE_MOV_LAB)) {
         *skipped = 1;
         continue;
       }
