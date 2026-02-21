@@ -650,22 +650,14 @@ fn void print_term_go(FILE *f, Term term, u32 depth, PrintState *st) {
       print_term_at(f, HEAP[loc + 1], depth + 1, st);
       break;
     }
-    case GET: {
-      u32 loc = term_val(term);
-      if (loc != 0 && term_sub_get(HEAP[loc])) {
-        print_term_mode(f, term_sub_set(HEAP[loc], 0), depth, 0, 0, 0, st);
-      } else {
-        fprintf(f, "?GET(%u)", loc);
-      }
-      break;
-    }
+    case GET:
     case GOT: {
       u32 loc = term_val(term);
-      if (loc != 0 && term_sub_get(HEAP[loc])) {
-        print_term_mode(f, term_sub_set(HEAP[loc], 0), depth, 0, 0, 0, st);
-      } else {
-        fprintf(f, "?GOT(%u)", loc);
+      Term val = HEAP[loc];
+      if (term_sub_get(val)) {
+        val = term_sub_set(val, 0);
       }
+      print_term_mode(f, val, depth, 0, 0, 0, st);
       break;
     }
     case BJG: {
