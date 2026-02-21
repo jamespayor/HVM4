@@ -109,10 +109,43 @@ __attribute__((hot)) fn Term wnf(Term term) {
 
       case DP0:
       case DP1: {
-        u32 loc = term_val(next);
+        u32 loc  = term_val(next);
+        u32 lab  = term_ext(next);
+        u8  side = (term_tag(next) == DP1) ? 1 : 0;
         Term cell = heap_take(loc);
         if (term_sub_get(cell)) {
           next = term_sub_set(cell, 0);
+          goto enter;
+        }
+        // GET/GOT fusion: if the DUP cell directly holds a GET or GOT, redirect
+        // this DP to the MOV value cell so the DUP-constructor interaction fires
+        // there directly, skipping the GET-frame and DUP-frame intermediate steps.
+        // The other DP side gets GOT(mov_loc)|SUB written to the DUP cell; when
+        // it demands its value it reads the DUP-constructor's other-side result
+        // from mov_loc (written there by heap_subst_cop with loc=mov_loc).
+        // Threading note: heap_take(mov_loc) has the same semantics as the normal
+        // DP heap_take(loc) — at most one claimant wins; if the cell is already 0
+        // the behaviour matches the existing DP0/DP1 race case.
+        u8 ctag = term_tag(cell);
+        if (ctag == GET || ctag == GOT) {
+          u32 mov_loc = term_val(cell);
+          heap_set_rel(loc, term_sub_set(term_new_got(mov_loc), 1));
+          Term inner = heap_take(mov_loc);
+          if (term_sub_get(inner)) {
+            // MOV cell already has a cached result (SUB=1) from a prior
+            // DUP-constructor (e.g., DUP-LAM wrote the other-side LAM here).
+            // This is a "third demand" edge case (MOV contract violation).
+            // Give this DP the cached value; the other DP reads GOT(mov_loc)
+            // from the DUP cell and finds ERA|SUB, receiving ERA.
+            inner = term_sub_set(inner, 0);
+            heap_set(mov_loc, term_sub_set(term_new_era(), 1));
+            whnf = heap_subst_cop(side, loc, inner, inner);
+            goto apply;
+          }
+          // First encounter: push DP(mov_loc) frame. DUP-constructor fires here
+          // and writes the other-side result into mov_loc via heap_subst_cop.
+          stack[s_pos++] = term_new(0, term_tag(next), lab, mov_loc);
+          next = inner;
           goto enter;
         }
         stack[s_pos++] = next;
@@ -526,15 +559,21 @@ __attribute__((hot)) fn Term wnf(Term term) {
               u32  mov_loc = term_val(whnf);
               Term inner   = heap_read(mov_loc);
               if (term_sub_get(inner)) {
-                // Second encounter: cached value
+                // Second encounter: MOV cell has a cached result (SUB=1) from a
+                // prior DUP-constructor. This fires when a DUP expression (not a
+                // plain GET/GOT, so it bypassed the enter-phase fusion) reduced to
+                // GOT and found the cell already populated. Should not happen in
+                // correct MOV usage ("at most twice" invariant) — treat as edge case.
                 inner = term_sub_set(inner, 0);
                 heap_set(mov_loc, term_sub_set(term_new_era(), 1));
                 whnf = heap_subst_cop(side, loc, inner, inner);
                 continue;
               }
-              // First encounter: clone and cache
-              whnf = wnf_dup_got(lab, loc, side, mov_loc, inner);
-              continue;
+              // First encounter: redirect this DP to mov_loc directly.
+              // DUP-constructor fires with loc=mov_loc and writes other-side result
+              // back there; the other DP retrieves it via GOT(mov_loc) in DUP cell.
+              next = wnf_dup_got(lab, loc, side, mov_loc, inner);
+              goto enter;
             }
             case NAM:
             case BJV:
