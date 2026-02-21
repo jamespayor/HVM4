@@ -365,9 +365,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_app_era();
@@ -436,9 +436,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_app_era();
@@ -489,9 +489,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_use_era();
@@ -601,9 +601,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_op2_era();
@@ -650,9 +650,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_op2_num_era();
@@ -696,9 +696,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_eql_era_l();
@@ -742,9 +742,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_eql_era_r();
@@ -832,9 +832,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_dsu_era();
@@ -875,9 +875,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_ddu_era();
@@ -917,9 +917,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_and_era();
@@ -976,9 +976,9 @@ __attribute__((hot)) fn Term wnf(Term term) {
                 inner = term_sub_set(inner, 0);
               }
               heap_set(mov_loc, term_sub_set(term_new_era(), 1));
-              whnf = inner;
-              s_pos++;
-              continue;
+              stack[s_pos++] = frame;
+              next = inner;
+              goto enter;
             }
             case ERA: {
               whnf = wnf_or_era();
