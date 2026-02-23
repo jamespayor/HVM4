@@ -458,6 +458,7 @@ static int    PARSE_FORK_SIDE = -1;      // -1 = off, 0 = left branch (DP0), 1 =
 #include "wnf/dup_sup.c"
 #include "wnf/dup_nod.c"
 #include "wnf/dup_got.c"
+#include "wnf/mov_sup.c"
 #include "wnf/alo_var.c"
 #include "wnf/alo_cop.c"
 #include "wnf/alo_nam.c"

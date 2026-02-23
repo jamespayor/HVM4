@@ -137,6 +137,7 @@ __attribute__((hot)) fn Term wnf(Term term) {
             // This is a "third demand" edge case (MOV contract violation).
             // Give this DP the cached value; the other DP reads GOT(mov_loc)
             // from the DUP cell and finds ERA|SUB, receiving ERA.
+            printf("[MOV-VIOLATION] DP%d(lab=%u) hit cached mov_loc=%u (third demand)\n", side, lab, mov_loc);
             inner = term_sub_set(inner, 0);
             heap_set(mov_loc, term_sub_set(term_new_era(), 1));
             whnf = heap_subst_cop(side, loc, inner, inner);
@@ -144,6 +145,7 @@ __attribute__((hot)) fn Term wnf(Term term) {
           }
           // First encounter: push DP(mov_loc) frame. DUP-constructor fires here
           // and writes the other-side result into mov_loc via heap_subst_cop.
+          printf("[DP-GET-FUSE] DP%d(lab=%u) first encounter at mov_loc=%u, inner_tag=%u\n", side, lab, mov_loc, term_tag(inner));
           stack[s_pos++] = term_new(0, term_tag(next), lab, mov_loc);
           next = inner;
           goto enter;
@@ -157,9 +159,20 @@ __attribute__((hot)) fn Term wnf(Term term) {
         u32  loc  = term_val(next);
         Term cell = heap_read(loc);
         if (term_sub_get(cell)) {
+          printf("[GET-ENTER] mov_loc=%u CACHE HIT cell_tag=%u stack_depth=%u\n", loc, term_tag(cell), s_pos - base);
           heap_set(loc, term_sub_set(term_new_era(), 1));
           next = term_sub_set(cell, 0);
           goto enter;
+        }
+        printf("[GET-ENTER] mov_loc=%u FRESH cell_tag=%u stack_depth=%u\n", loc, term_tag(cell), s_pos - base);
+        for (u32 si = base; si < s_pos; si++) {
+          Term sf = stack[si];
+          printf("  stack[%u]: tag=%u val=%u ext=%u", si - base, term_tag(sf), term_val(sf), term_ext(sf));
+          if (term_tag(sf) == APP) {
+            Term arg = heap_read(term_val(sf) + 1);
+            printf(" arg_tag=%u arg_val=%u arg_ext=%u", term_tag(arg), term_val(arg), term_ext(arg));
+          }
+          printf("\n");
         }
         stack[s_pos++] = next;
         next = cell;
@@ -394,6 +407,7 @@ __attribute__((hot)) fn Term wnf(Term term) {
             case GOT: {
               u32  mov_loc = term_val(whnf);
               Term inner   = heap_read(mov_loc);
+              printf("[APP-GOT] consuming mov_loc=%u, inner_tag=%u, inner_sub=%u\n", mov_loc, term_tag(inner), term_sub_get(inner));
               if (term_sub_get(inner)) {
                 inner = term_sub_set(inner, 0);
               }
@@ -560,10 +574,8 @@ __attribute__((hot)) fn Term wnf(Term term) {
               Term inner   = heap_read(mov_loc);
               if (term_sub_get(inner)) {
                 // Second encounter: MOV cell has a cached result (SUB=1) from a
-                // prior DUP-constructor. This fires when a DUP expression (not a
-                // plain GET/GOT, so it bypassed the enter-phase fusion) reduced to
-                // GOT and found the cell already populated. Should not happen in
-                // correct MOV usage ("at most twice" invariant) — treat as edge case.
+                // prior DUP-constructor.
+                printf("[MOV-DUP-2ND] DP%d(lab=%u) second encounter at mov_loc=%u\n", side, lab, mov_loc);
                 inner = term_sub_set(inner, 0);
                 heap_set(mov_loc, term_sub_set(term_new_era(), 1));
                 whnf = heap_subst_cop(side, loc, inner, inner);
@@ -988,14 +1000,19 @@ __attribute__((hot)) fn Term wnf(Term term) {
         // -----------------------------------------------------------------------
         case GET: {
           u32 loc = term_val(frame);
-          // Write WNF result back to cell
-          heap_set(loc, whnf);
-          // If neutral: return as-is
           u8 wtag = term_tag(whnf);
+          // If neutral: write back and return as-is
           if (wtag == NAM || wtag == BJV || wtag == BJ0 || wtag == BJ1 || wtag == BJG || wtag == DRY) {
+            heap_set(loc, whnf);
             continue;
           }
-          // Constructor: return GOT
+          // MOV-SUP: commute MOV under SUP
+          if (wtag == SUP) {
+            whnf = wnf_mov_sup(loc, whnf);
+            continue;
+          }
+          // Other constructor: write back, return GOT
+          heap_set(loc, whnf);
           whnf = term_new_got(loc);
           continue;
         }
