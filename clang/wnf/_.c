@@ -165,15 +165,6 @@ __attribute__((hot)) fn Term wnf(Term term) {
           goto enter;
         }
         printf("[GET-ENTER] mov_loc=%u FRESH cell_tag=%u stack_depth=%u\n", loc, term_tag(cell), s_pos - base);
-        for (u32 si = base; si < s_pos; si++) {
-          Term sf = stack[si];
-          printf("  stack[%u]: tag=%u val=%u ext=%u", si - base, term_tag(sf), term_val(sf), term_ext(sf));
-          if (term_tag(sf) == APP) {
-            Term arg = heap_read(term_val(sf) + 1);
-            printf(" arg_tag=%u arg_val=%u arg_ext=%u", term_tag(arg), term_val(arg), term_ext(arg));
-          }
-          printf("\n");
-        }
         stack[s_pos++] = next;
         next = cell;
         goto enter;
